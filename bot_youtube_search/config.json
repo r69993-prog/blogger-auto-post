@@ -1,0 +1,88 @@
+{
+  "YOUTUBE_API_KEY": "AIzaSyDzEoKCgZ7uC7-bBBLl8qE6xV_J7hMgKqo",
+  "time_interval_hours": 2,
+  "blogs": [
+    {
+      "blog_name": "ระบบกลไก",
+      "BLOG_ID": "7261621395427988771",
+      "language": "TH",
+      "seo_title_suffix": "ระบบกลไก",
+      "max_results_per_run": 2,
+      "youtube_search_keywords": [
+        "Mechanism design",
+        "ระบบกลไก",
+        "Mechanical system",
+        "Transmission system"
+      ],
+      "blogger_labels": [
+        "Tech",
+        "Gadget"
+      ]
+    },
+    {
+      "blog_name": " Industrial (English)",
+      "BLOG_ID": "6321192511447492789",
+      "language": "EN",
+      "seo_title_suffix": "engineering",
+      "max_results_per_run": 2,
+      "youtube_search_keywords": [
+        "industrial machinery",
+        "mechanical engineering "
+      ],
+      "blogger_labels": [
+        "Industrial",
+        "Engineering",
+        "Video"
+      ]
+    },
+    {
+      "blog_name": "Machine & Mechanical Design (ใหม่)",
+      "BLOG_ID": "7707792750976542809",
+      "language": "EN",
+      "seo_title_suffix": "Engineering View",
+      "max_results_per_run": 2,
+      "youtube_search_keywords": [
+        "machine design",
+        "Mechanical system",
+        "Machine homemake"
+      ],
+      "blogger_labels": [
+        "Mechanical",
+        "Design",
+        "Video"
+        
+      ]
+    },
+    {
+      "blog_name": "Knowledge Engineering (ใหม่)",
+      "BLOG_ID": "2962551177226991802",
+      "language": "EN",
+      "seo_title_suffix": "Tech Intelligence",
+      "max_results_per_run": 2,
+      "youtube_search_keywords": [
+        "knowledge Engineering",
+        "technology",
+        "Engineering"
+      ],
+      "blogger_labels": [
+        "Technology",
+        "Knowledge"
+      ]
+    },
+    {
+      "blog_name": "CNC Machine Center (ใหม่)",
+      "BLOG_ID": "2882579450350054162",
+      "language": "TH",
+      "seo_title_suffix": "เจาะลึกกลไก",
+      "max_results_per_run": 2,
+      "youtube_search_keywords": [
+        "CNC",
+        "CNC Machine"
+      ],
+      "blogger_labels": [
+        "CNC",
+        "Factory"
+      ]
+    }
+  ]
+}

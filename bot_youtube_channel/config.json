@@ -1,0 +1,16 @@
+{
+  "BLOG_ID": "6321192511447492789",
+  "YOUTUBE_CHANNELS": [
+    "UCi7m3wD67Xm9CndnN_N80QA",
+    "UC2bkHVIDjXS7sgrgjFtzOXQ",
+    "UCw38XI9S6_vY633-9_F60_w"
+  ],
+  "POST_LABELS": [
+    "Engineering",
+    "Machinery",
+    "Industrial Automation"
+  ],
+  "HOURS_INTERVAL": 1,
+  "START_DELAY_MINUTES": 10,
+  "API_REQUEST_DELAY_SECONDS": 10
+}
