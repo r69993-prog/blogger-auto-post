@@ -44,47 +44,47 @@ def search_youtube_videos(api_key, query, max_results=5):
     return videos
 
 def generate_blog_content(gemini_api_key, video, search_query, language="TH"):
-    genai.configure(api_key=gemini_api_key)
-    model = genai.GenerativeModel(
-        "gemini-1.5-flash",
-        generation_config={"response_mime_type": "application/json"}
-    )
-
-    prompt = f"""
-    คุณคือ Senior Content Creator และ SEO Specialist
-    สร้างบทความจากคลิปวิดีโอ YouTube ดังนี้:
-    - หัวข้อคลิป: {video['title']}
-    - คำอธิบายคลิป: {video['description']}
-    - ลิงก์รูปภาพปก: {video['thumbnail']}
-    - ลิงก์ฝังคลิป: https://www.youtube.com/embed/{video['id']}
-    - คีย์เวิร์ดค้นหา: {search_query}
-    - ภาษาหลักของบทความ: {language}
-
-    คำสั่งในการสร้างเนื้อหาภาษา {language}:
-    ส่วนที่ 1 (title): สร้างหัวข้อบทความที่ดึงดูด ทำ SEO ใส่ Keyword เป็นธรรมชาติและน่าสนใจไม่ซ้ำใคร
-    ส่วนที่ 2 (content_html): เขียนบทความภาษา {language} จัดวางโครงสร้างสวยงาม มีหัวข้อรอง (h2, h3) เนื้อหาละเอียด อ่านง่าย โดยในเนื้อหาต้องใส่รูปปก <img src="{video['thumbnail']}" style="max-width:100%; height:auto;" /> และฝังวิดีโอ <iframe width="560" height="315" src="https://www.youtube.com/embed/{video['id']}" frameborder="0" allowfullscreen></iframe>
-    ส่วนที่ 3 (labels): กำหนดป้ายกำกับ Label ที่เกี่ยวข้อง แยกหมวดหมู่ชัดเจน ความยาวไม่เกิน 4 คำต่อ Label (ให้คืนค่าเป็นอาร์เรย์ของสตริง)
-
-    ให้ตอบกลับเป็นโครงสร้าง JSON ดังนี้เท่านั้น:
-    {{
-      "title": "...",
-      "content_html": "...",
-      "labels": ["คำที่1", "คำที่2", "คำที่3"]
-    }}
-    """
-
-    response = model.generate_content(prompt)
-    text = response.text.strip()
-    
     try:
+        genai.configure(api_key=gemini_api_key)
+        model = genai.GenerativeModel(
+            "gemini-1.5-flash",
+            generation_config={"response_mime_type": "application/json"}
+        )
+
+        prompt = f"""
+        คุณคือ Senior Content Creator และ SEO Specialist
+        สร้างบทความจากคลิปวิดีโอ YouTube ดังนี้:
+        - หัวข้อคลิป: {video['title']}
+        - คำอธิบายคลิป: {video['description']}
+        - ลิงก์รูปภาพปก: {video['thumbnail']}
+        - ลิงก์ฝังคลิป: https://www.youtube.com/embed/{video['id']}
+        - คีย์เวิร์ดค้นหา: {search_query}
+        - ภาษาหลักของบทความ: {language}
+
+        คำสั่งในการสร้างเนื้อหาภาษา {language}:
+        ส่วนที่ 1 (title): สร้างหัวข้อบทความที่ดึงดูด ทำ SEO ใส่ Keyword เป็นธรรมชาติและน่าสนใจไม่ซ้ำใคร
+        ส่วนที่ 2 (content_html): เขียนบทความภาษา {language} จัดวางโครงสร้างสวยงาม มีหัวข้อรอง (h2, h3) เนื้อหาละเอียด อ่านง่าย โดยในเนื้อหาต้องใส่รูปปก <img src="{video['thumbnail']}" style="max-width:100%; height:auto;" /> และฝังวิดีโอ <iframe width="560" height="315" src="https://www.youtube.com/embed/{video['id']}" frameborder="0" allowfullscreen></iframe>
+        ส่วนที่ 3 (labels): กำหนดป้ายกำกับ Label ที่เกี่ยวข้อง แยกหมวดหมู่ชัดเจน ความยาวไม่เกิน 4 คำต่อ Label (ให้คืนค่าเป็นอาร์เรย์ของสตริง)
+
+        ให้ตอบกลับเป็นโครงสร้าง JSON ดังนี้เท่านั้น:
+        {{
+          "title": "...",
+          "content_html": "...",
+          "labels": ["คำที่1", "คำที่2", "คำที่3"]
+        }}
+        """
+
+        response = model.generate_content(prompt)
+        text = response.text.strip()
         data = json.loads(text)
         return data
     except Exception as e:
-        print(f"JSON Parse Error: {e}")
+        print(f"Gemini API Error or JSON Parse Error: {e}")
+        print("Using fallback content generator...")
         return {
-            "title": f"[SEO] {video['title']}",
-            "content_html": f"<h2>{video['title']}</h2><p><img src='{video['thumbnail']}' alt='Cover' style='max-width:100%;' /></p><p>{video['description']}</p><p><iframe width='560' height='315' src='https://www.youtube.com/embed/{video['id']}' frameborder='0' allowfullscreen></iframe></p>",
-            "labels": [search_query, "YouTube", "สาระน่ารู้"]
+            "title": f"{video['title']} - {search_query}",
+            "content_html": f"<h2>{video['title']}</h2><p><img src='{video['thumbnail']}' alt='Cover' style='max-width:100%; height:auto;' /></p><p>{video['description']}</p><p><iframe width='560' height='315' src='https://www.youtube.com/embed/{video['id']}' frameborder='0' allowfullscreen></iframe></p>",
+            "labels": [search_query, "YouTube", "Video"]
         }
 
 def post_to_blogger(service, blog_id, title, content_html, labels):
@@ -130,7 +130,7 @@ def main():
                 video = videos[0]
                 print(f"Found Video: {video['title']} ({video['url']})")
                 
-                print("Generating content with Gemini...")
+                print("Generating content...")
                 content_data = generate_blog_content(gemini_key, video, kw, language)
                 
                 print(f"Generated Title: {content_data.get('title')}")
