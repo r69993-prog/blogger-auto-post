@@ -1,52 +1,28 @@
 name: Run Blogger Auto Post Bot
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'
   workflow_dispatch:
+  schedule:
+    - cron: '0 */2 * * *'
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Restore token.pickle from Secret
-        working-directory: bot_youtube_search
-        env:
-          TOKEN_PICKLE_BASE64: ${{ secrets.TOKEN_PICKLE_BASE64 }}
-        run: |
-          echo "$TOKEN_PICKLE_BASE64" | base64 -d > token.pickle
-
-      - name: Inject GEMINI_API_KEY into config.json
-        working-directory: bot_youtube_search
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          python3 -c "
-          import json, os
-          config_file = 'config.json'
-          if os.path.exists(config_file):
-              with open(config_file, 'r', encoding='utf-8') as f:
-                  data = json.load(f)
-              data['gemini_api_key'] = os.environ.get('GEMINI_API_KEY', '')
-              with open(config_file, 'w', encoding='utf-8') as f:
-                  json.dump(data, f, indent=2, ensure_ascii=False)
-          "
+          pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib google-generativeai
 
       - name: Run Main Script
-        working-directory: bot_youtube_search
         run: |
-          python3 main.py
+          python bot_youtube_search/main.py
