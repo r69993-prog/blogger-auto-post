@@ -45,6 +45,9 @@ def search_youtube_videos(api_key, query, max_results=5):
 
 def generate_blog_content(gemini_api_key, video, search_query, language="TH"):
     try:
+        if not gemini_api_key:
+            raise ValueError("gemini_api_key is empty")
+            
         genai.configure(api_key=gemini_api_key)
         model = genai.GenerativeModel(
             "gemini-1.5-flash",
@@ -110,6 +113,11 @@ def main():
     gemini_key = config.get("gemini_api_key") or config.get("GEMINI_API_KEY")
     youtube_key = config.get("YOUTUBE_API_KEY") or config.get("youtube_api_key")
     
+    if gemini_key:
+        print(f"Using Gemini Key prefix: {gemini_key[:8]}...")
+    else:
+        print("WARNING: gemini_api_key not found in config.json")
+        
     blogs = config.get("blogs", [])
     print(f"Total blogs in config: {len(blogs)}")
     
