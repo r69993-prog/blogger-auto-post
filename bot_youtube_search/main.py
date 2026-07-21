@@ -5,9 +5,10 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import google.generativeai as genai
 
-# Load configuration
+# Load configuration paths
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
-TOKEN_PATH = os.path.join(os.path.dirname(__file__), "token.pickle")
+TOKEN_PATH = os.path.join(BASE_DIR, "token.pickle")
 
 def load_config():
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -110,7 +111,6 @@ def main():
     config = load_config()
     blogger_service = get_blogger_service()
     
-    # Force loading strict gemini_api_key from config.json ONLY
     gemini_key = config.get("gemini_api_key")
     youtube_key = config.get("YOUTUBE_API_KEY")
     
