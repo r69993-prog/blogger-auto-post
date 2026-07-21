@@ -14,6 +14,13 @@ def load_config():
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
+def clean_key(key):
+    if not key:
+        return ""
+    # Remove non-ASCII characters, quotes, and whitespace
+    cleaned = re.sub(r'[^\x00-\x7F]+', '', str(key))
+    return cleaned.replace('"', '').replace("'", "").strip()
+
 def get_blogger_service():
     import pickle
     with open(TOKEN_PATH, "rb") as token:
@@ -46,10 +53,11 @@ def search_youtube_videos(api_key, query, max_results=5):
 
 def generate_blog_content(gemini_api_key, video, search_query, language="TH"):
     try:
-        if not gemini_api_key:
-            raise ValueError("gemini_api_key is missing or empty")
+        cleaned_gemini_key = clean_key(gemini_api_key)
+        if not cleaned_gemini_key:
+            raise ValueError("gemini_api_key is missing or empty after cleaning")
             
-        genai.configure(api_key=gemini_api_key)
+        genai.configure(api_key=cleaned_gemini_key)
         model = genai.GenerativeModel(
             "gemini-1.5-flash",
             generation_config={"response_mime_type": "application/json"}
@@ -112,10 +120,11 @@ def main():
     blogger_service = get_blogger_service()
     
     gemini_key = config.get("gemini_api_key")
-    youtube_key = config.get("YOUTUBE_API_KEY")
+    youtube_key = clean_key(config.get("YOUTUBE_API_KEY"))
     
-    if gemini_key:
-        print(f"Explicit Config Gemini Key Loaded: {gemini_key[:8]}...")
+    cleaned_gemini = clean_key(gemini_key)
+    if cleaned_gemini:
+        print(f"Explicit Config Gemini Key Loaded (Cleaned): {cleaned_gemini[:8]}...")
     else:
         print("ERROR: gemini_api_key is completely missing in config.json")
         
