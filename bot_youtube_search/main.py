@@ -19,7 +19,7 @@ def get_blogger_service():
         creds = pickle.load(token)
     return build("blogger", "v3", credentials=creds)
 
-def search_youtube_videos(api_key, query, max_results=3):
+def search_youtube_videos(api_key, query, max_results=1):
     youtube = build("youtube", "v3", developerKey=api_key)
     request = youtube.search().list(
         q=query,
@@ -69,7 +69,6 @@ def generate_blog_content(gemini_api_key, video, search_query, language="th"):
     response = model.generate_content(prompt)
     text = response.text.strip()
     
-    # Clean output JSON if needed
     if text.startswith("```"):
         text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
         text = re.sub(r"\n?```$", "", text)
@@ -78,7 +77,6 @@ def generate_blog_content(gemini_api_key, video, search_query, language="th"):
         data = json.loads(text.strip())
         return data
     except Exception as e:
-        # Fallback if AI output is not strict JSON
         return {
             "title": f"{video['title']} - เจาะลึกน่าสนใจ",
             "content_html": f"<h2>{video['title']}</h2><p><img src='{video['thumbnail']}' alt='Cover' /></p><p>{video['description']}</p><p><iframe width='560' height='315' src='[https://www.youtube.com/embed/](https://www.youtube.com/embed/){video['id']}' frameborder='0' allowfullscreen></iframe></p>",
@@ -104,7 +102,11 @@ def main():
     youtube_key = config.get("youtube_api_key", gemini_key)
     
     for blog in config.get("blogs", []):
-        blog_id = blog["blog_id"]
+        blog_id = blog.get("blog_id") or blog.get("blogId") or blog.get("id")
+        if not blog_id:
+            print("Skipping blog entry: missing blog_id")
+            continue
+
         keywords = blog.get("keywords", ["ข่าวด่วน"])
         language = blog.get("language", "th")
         
