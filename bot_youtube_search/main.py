@@ -107,8 +107,8 @@ def main():
     config = load_config()
     blogger_service = get_blogger_service()
     
-    gemini_key = config.get("gemini_api_key") or config.get("GEMINI_API_KEY") or config.get("YOUTUBE_API_KEY", "")
-    youtube_key = config.get("YOUTUBE_API_KEY") or config.get("youtube_api_key", gemini_key)
+    gemini_key = config.get("gemini_api_key") or config.get("GEMINI_API_KEY")
+    youtube_key = config.get("YOUTUBE_API_KEY") or config.get("youtube_api_key")
     
     blogs = config.get("blogs", [])
     print(f"Total blogs in config: {len(blogs)}")
