@@ -43,7 +43,7 @@ def search_youtube_videos(api_key, query, max_results=5):
         })
     return videos
 
-def generate_blog_content(gemini_api_key, video, search_query, language="th"):
+def generate_blog_content(gemini_api_key, video, search_query, language="TH"):
     genai.configure(api_key=gemini_api_key)
     model = genai.GenerativeModel(
         "gemini-1.5-flash",
@@ -107,21 +107,21 @@ def main():
     config = load_config()
     blogger_service = get_blogger_service()
     
-    gemini_key = config.get("gemini_api_key", "")
-    youtube_key = config.get("youtube_api_key", gemini_key)
+    gemini_key = config.get("gemini_api_key") or config.get("GEMINI_API_KEY") or config.get("YOUTUBE_API_KEY", "")
+    youtube_key = config.get("YOUTUBE_API_KEY") or config.get("youtube_api_key", gemini_key)
     
     blogs = config.get("blogs", [])
     print(f"Total blogs in config: {len(blogs)}")
     
     for index, blog in enumerate(blogs):
-        blog_id = blog.get("blog_id") or blog.get("blogId") or blog.get("id")
-        print(f"\n--- Processing Blog #{index + 1} (ID: {blog_id}) ---")
+        blog_id = blog.get("BLOG_ID") or blog.get("blog_id") or blog.get("blogId") or blog.get("id")
+        print(f"\n--- Processing Blog #{index + 1} (Name: {blog.get('blog_name', '')} | ID: {blog_id}) ---")
         if not blog_id:
             print("Skipping blog entry: missing blog_id")
             continue
 
-        keywords = blog.get("keywords", ["ข่าวด่วน"])
-        language = blog.get("language", "th")
+        keywords = blog.get("youtube_search_keywords") or blog.get("keywords", ["ข่าวด่วน"])
+        language = blog.get("language", "TH")
         
         for kw in keywords:
             print(f"Searching YouTube for keyword: {kw}")
