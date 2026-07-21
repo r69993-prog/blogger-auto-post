@@ -19,7 +19,7 @@ def get_blogger_service():
         creds = pickle.load(token)
     return build("blogger", "v3", credentials=creds)
 
-def search_youtube_videos(api_key, query, max_results=1):
+def search_youtube_videos(api_key, query, max_results=5):
     youtube = build("youtube", "v3", developerKey=api_key)
     request = youtube.search().list(
         q=query,
@@ -45,7 +45,10 @@ def search_youtube_videos(api_key, query, max_results=1):
 
 def generate_blog_content(gemini_api_key, video, search_query, language="th"):
     genai.configure(api_key=gemini_api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel(
+        "gemini-1.5-flash",
+        generation_config={"response_mime_type": "application/json"}
+    )
 
     prompt = f"""
     คุณคือ Senior Content Creator และ SEO Specialist
@@ -54,32 +57,32 @@ def generate_blog_content(gemini_api_key, video, search_query, language="th"):
     - คำอธิบายคลิป: {video['description']}
     - ลิงก์รูปภาพปก: {video['thumbnail']}
     - ลิงก์ฝังคลิป: https://www.youtube.com/embed/{video['id']}
-    - คีย์เวิร์ด/คีย์เวิร์ดค้นหา: {search_query}
+    - คีย์เวิร์ดค้นหา: {search_query}
     - ภาษาหลักของบทความ: {language}
 
-    กรุณาสร้างเนื้อหาแยกเป็น 3 ส่วนในรูปแบบ JSON ดังนี้ (ห้ามใส่สัญลักษณ์ Markdown code block ซ้อนในค่า JSON):
+    คำสั่งในการสร้างเนื้อหาภาษา {language}:
+    ส่วนที่ 1 (title): สร้างหัวข้อบทความที่ดึงดูด ทำ SEO ใส่ Keyword เป็นธรรมชาติและน่าสนใจไม่ซ้ำใคร
+    ส่วนที่ 2 (content_html): เขียนบทความภาษา {language} จัดวางโครงสร้างสวยงาม มีหัวข้อรอง (h2, h3) เนื้อหาละเอียด อ่านง่าย โดยในเนื้อหาต้องใส่รูปปก <img src="{video['thumbnail']}" style="max-width:100%; height:auto;" /> และฝังวิดีโอ <iframe width="560" height="315" src="https://www.youtube.com/embed/{video['id']}" frameborder="0" allowfullscreen></iframe>
+    ส่วนที่ 3 (labels): กำหนดป้ายกำกับ Label ที่เกี่ยวข้อง แยกหมวดหมู่ชัดเจน ความยาวไม่เกิน 4 คำต่อ Label (ให้คืนค่าเป็นอาร์เรย์ของสตริง)
+
+    ให้ตอบกลับเป็นโครงสร้าง JSON ดังนี้เท่านั้น:
     {{
-      "title": "หัวข้อบทความที่ดึงดูด น่าสนใจ ทำ SEO ใส่ Keyword เป็นธรรมชาติ ไม่ซ้ำใคร",
-      "content_html": "เนื้อหาบทความแบบ HTML ภาษา {language} โดยรวมรูปภาพหน้าปก <img src='{video['thumbnail']}' /> และฝังคลิป <iframe src='https://www.youtube.com/embed/{video['id']}'></iframe> ประกอบบทความ จัดวางโครงสร้างให้สวยงาม เหมาะสม อ่านง่าย ทำ SEO ธรรมชาติ",
-      "labels": ["ป้ายกำกับ1", "ป้ายกำกับ2", "ป้ายกำกับ3", "ป้ายกำกับ4"]
+      "title": "...",
+      "content_html": "...",
+      "labels": ["คำที่1", "คำที่2", "คำที่3"]
     }}
-    หมายเหตุสำหรับ labels: ติดป้ายกำกับ Label ที่เกี่ยวข้องแยกหมวดหมู่ชัดเจน ไม่เกิน 4 คำ
     """
 
     response = model.generate_content(prompt)
     text = response.text.strip()
     
-    if text.startswith("```"):
-        text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
-        text = re.sub(r"\n?```$", "", text)
-        
     try:
-        data = json.loads(text.strip())
+        data = json.loads(text)
         return data
     except Exception as e:
         return {
-            "title": f"{video['title']} - เจาะลึกน่าสนใจ",
-            "content_html": f"<h2>{video['title']}</h2><p><img src='{video['thumbnail']}' alt='Cover' /></p><p>{video['description']}</p><p><iframe width='560' height='315' src='[https://www.youtube.com/embed/](https://www.youtube.com/embed/){video['id']}' frameborder='0' allowfullscreen></iframe></p>",
+            "title": f"[SEO] {video['title']}",
+            "content_html": f"<h2>{video['title']}</h2><p><img src='{video['thumbnail']}' alt='Cover' style='max-width:100%;' /></p><p>{video['description']}</p><p><iframe width='560' height='315' src='https://www.youtube.com/embed/{video['id']}' frameborder='0' allowfullscreen></iframe></p>",
             "labels": [search_query, "YouTube", "สาระน่ารู้"]
         }
 
@@ -111,8 +114,9 @@ def main():
         language = blog.get("language", "th")
         
         for kw in keywords:
-            videos = search_youtube_videos(youtube_key, kw, max_results=1)
+            videos = search_youtube_videos(youtube_key, kw, max_results=5)
             if videos:
+                # เลือกวิดีโอเพื่อนำมาสร้างบทความ
                 video = videos[0]
                 content_data = generate_blog_content(gemini_key, video, kw, language)
                 
