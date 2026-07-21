@@ -80,6 +80,7 @@ def generate_blog_content(gemini_api_key, video, search_query, language="th"):
         data = json.loads(text)
         return data
     except Exception as e:
+        print(f"JSON Parse Error: {e}")
         return {
             "title": f"[SEO] {video['title']}",
             "content_html": f"<h2>{video['title']}</h2><p><img src='{video['thumbnail']}' alt='Cover' style='max-width:100%;' /></p><p>{video['description']}</p><p><iframe width='560' height='315' src='https://www.youtube.com/embed/{video['id']}' frameborder='0' allowfullscreen></iframe></p>",
@@ -87,15 +88,20 @@ def generate_blog_content(gemini_api_key, video, search_query, language="th"):
         }
 
 def post_to_blogger(service, blog_id, title, content_html, labels):
-    body = {
-        "kind": "blogger#post",
-        "title": title,
-        "content": content_html,
-        "labels": labels
-    }
-    posts = service.posts()
-    result = posts.insert(blogId=blog_id, body=body).execute()
-    print(f"Successfully posted to Blog ID {blog_id}: {result.get('url')}")
+    try:
+        body = {
+            "kind": "blogger#post",
+            "title": title,
+            "content": content_html,
+            "labels": labels
+        }
+        posts = service.posts()
+        result = posts.insert(blogId=blog_id, body=body).execute()
+        print(f"SUCCESS: Posted to Blog ID: {blog_id}")
+        print(f"Post URL: {result.get('url')}")
+        print(f"Post Title: {result.get('title')}")
+    except Exception as e:
+        print(f"ERROR posting to Blog ID {blog_id}: {e}")
 
 def main():
     config = load_config()
@@ -104,8 +110,12 @@ def main():
     gemini_key = config.get("gemini_api_key", "")
     youtube_key = config.get("youtube_api_key", gemini_key)
     
-    for blog in config.get("blogs", []):
+    blogs = config.get("blogs", [])
+    print(f"Total blogs in config: {len(blogs)}")
+    
+    for index, blog in enumerate(blogs):
         blog_id = blog.get("blog_id") or blog.get("blogId") or blog.get("id")
+        print(f"\n--- Processing Blog #{index + 1} (ID: {blog_id}) ---")
         if not blog_id:
             print("Skipping blog entry: missing blog_id")
             continue
@@ -114,11 +124,17 @@ def main():
         language = blog.get("language", "th")
         
         for kw in keywords:
+            print(f"Searching YouTube for keyword: {kw}")
             videos = search_youtube_videos(youtube_key, kw, max_results=5)
             if videos:
-                # เลือกวิดีโอเพื่อนำมาสร้างบทความ
                 video = videos[0]
+                print(f"Found Video: {video['title']} ({video['url']})")
+                
+                print("Generating content with Gemini...")
                 content_data = generate_blog_content(gemini_key, video, kw, language)
+                
+                print(f"Generated Title: {content_data.get('title')}")
+                print(f"Generated Labels: {content_data.get('labels')}")
                 
                 post_to_blogger(
                     service=blogger_service,
@@ -128,6 +144,8 @@ def main():
                     labels=content_data.get("labels", [])
                 )
                 break
+            else:
+                print(f"No videos found for keyword: {kw}")
 
 if __name__ == "__main__":
     main()
