@@ -2,7 +2,7 @@ import os
 import json
 import requests
 from googleapiclient.discovery import build
-import google.genai as genai
+import google.generativeai as genai
 
 # Load Config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -26,7 +26,8 @@ def get_youtube_videos(query, max_results=1):
     return response.get("items", [])
 
 def generate_article(title, description, language="th"):
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-1.5-flash")
     
     if language == "en":
         prompt = f"""
@@ -51,10 +52,7 @@ Requirements:
 - ห้ามใช้ Markdown ให้ใช้แท็ก HTML <p> สำหรับย่อหน้าทั่วไปเท่านั้น
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
+    response = model.generate_content(prompt)
     return response.text
 
 def post_to_blogger(blog_id, title, content_html, access_token):
