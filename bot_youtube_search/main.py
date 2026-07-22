@@ -23,10 +23,11 @@ def get_blogger_service():
         else:
             raise Exception("token.pickle Invalid or Expired")
 
-    return build('blogger', '3', credentials=creds)
+    discovery_url = 'https://blogger.googleapis.com/$discovery/rest?version=v3'
+    return build('blogger', 'v3', credentials=creds, discoveryServiceUrl=discovery_url)
 
 def search_youtube_video(keyword, youtube_api_key):
-    youtube = build('youtube', '3', developerKey=youtube_api_key)
+    youtube = build('youtube', 'v3', developerKey=youtube_api_key)
     request = youtube.search().list(
         q=keyword,
         part='snippet',
