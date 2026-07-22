@@ -29,16 +29,29 @@ def get_blogger_service():
     discovery_url = 'https://blogger.googleapis.com/$discovery/rest?version=v3'
     return build('blogger', 'v3', credentials=creds, discoveryServiceUrl=discovery_url)
 
+def extract_image_url(entry):
+    if 'media_content' in entry and len(entry.media_content) > 0:
+        return entry.media_content[0].get('url')
+    if 'media_thumbnail' in entry and len(entry.media_thumbnail) > 0:
+        return entry.media_thumbnail[0].get('url')
+    if 'links' in entry:
+        for link in entry.links:
+            if link.get('type', '').startswith('image/'):
+                return link.get('href')
+    return "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80"
+
 def fetch_latest_news(rss_urls):
     for url in rss_urls:
         try:
             feed = feedparser.parse(url)
             if feed.entries:
                 entry = random.choice(feed.entries[:5])
+                image_url = extract_image_url(entry)
                 return {
                     'title': entry.get('title', ''),
                     'link': entry.get('link', ''),
-                    'summary': entry.get('summary', '')
+                    'summary': entry.get('summary', ''),
+                    'image': image_url
                 }
         except Exception as e:
             print(f"Error fetching RSS {url}: {e}")
@@ -49,12 +62,12 @@ def generate_ai_summary(news_item, gemini_api_key, language="en"):
     client = genai.Client(api_key=gemini_api_key)
     
     if language == "th":
-        lang_instruction = "Write the ENTIRE blog post (title and content) in THAI language (ภาษาไทย)."
+        lang_instruction = "Write the ENTIRE blog post (title and content) strictly in THAI language (ภาษาไทย)."
     else:
-        lang_instruction = "Write the ENTIRE blog post (title and content) in ENGLISH language."
+        lang_instruction = "Write the ENTIRE blog post (title and content) strictly in ENGLISH language."
 
     prompt = f"""
-Summarize the following news article into a comprehensive blog post in HTML format.
+Summarize the following news article into a comprehensive, professional blog post.
 
 {lang_instruction}
 
@@ -65,13 +78,12 @@ Raw Summary: {news_item['summary']}
 Instructions:
 1. Write a compelling blog title and full body content in HTML format.
 2. Structure the body using <h2>, <p>, <ul>, <li>, and <blockquote> tags.
-3. Include an embedded credit back to the source link at the end of the post.
-4. Do NOT wrap the output in ```html or ``` text blocks. Return ONLY a valid JSON object.
+3. Do NOT include html/head/body wrappers or markdown code blocks (```json). Return ONLY a valid JSON object.
 
 JSON Response Format:
 {{
   "title": "Blog Title Here",
-  "content": "<p>Content in HTML format...</p>"
+  "content": "<h2>Overview</h2><p>Content in HTML format...</p>"
 }}
 """
     try:
@@ -87,12 +99,34 @@ JSON Response Format:
         if text.endswith("```"):
             text = text[:-3]
         text = text.strip()
-        
-        data = json.loads(text)
-        return data
+        return json.loads(text)
     except Exception as e:
         print(f"Error generating AI summary: {e}")
         return None
+
+def build_styled_html(news_item, ai_data):
+    image_url = news_item.get('image')
+    article_html = ai_data.get('content', '')
+    source_link = news_item.get('link', '#')
+    
+    html = f"""
+<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto;">
+  <div style="text-align: center; margin-bottom: 25px;">
+    <img src="{image_url}" alt="News Featured Image" style="width: 100%; max-width: 750px; height: auto; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.12);" />
+  </div>
+  
+  <div style="margin-bottom: 30px;">
+    {article_html}
+  </div>
+
+  <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
+
+  <blockquote style="background-color: #f9f9f9; border-left: 4px solid #007bff; padding: 12px 20px; margin: 20px 0; font-size: 0.9em;">
+    <strong>Reference / ที่มาของข่าว:</strong> <a href="{source_link}" target="_blank" rel="noopener noreferrer" style="color: #007bff; text-decoration: none;">อ่านข่าวต้นฉบับเต็มคลิกที่นี่</a>
+  </blockquote>
+</div>
+"""
+    return html
 
 def post_to_blogger(blogger_service, blog_id, post_data, labels):
     body = {
@@ -103,8 +137,7 @@ def post_to_blogger(blogger_service, blog_id, post_data, labels):
     }
     posts = blogger_service.posts()
     request = posts.insert(blogId=blog_id, body=body)
-    response = request.execute()
-    return response
+    return request.execute()
 
 def main():
     config_path = os.path.join(os.path.dirname(__file__), 'config.json')
@@ -140,9 +173,11 @@ def main():
                 suffix = blog.get('seo_title_suffix', '')
                 final_title = f"{ai_data['title']} - {suffix}" if suffix else ai_data['title']
                 
+                styled_content = build_styled_html(news_item, ai_data)
+                
                 post_payload = {
                     'title': final_title,
-                    'content': ai_data['content']
+                    'content': styled_content
                 }
                 
                 labels = blog.get('blogger_labels', ['AI', 'News'])
