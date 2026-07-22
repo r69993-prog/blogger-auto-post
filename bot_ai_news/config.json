@@ -4,6 +4,7 @@
     {
       "blog_name": "ระบบกลไก",
       "BLOG_ID": "7261621395427988771",
+      "language": "th",
       "rss_feeds": [
         "https://news.google.com/rss/search?q=mechanical+engineering&hl=en-US&gl=US&ceid=US:en",
         "https://news.google.com/rss/search?q=automation+technology&hl=en-US&gl=US&ceid=US:en"
@@ -14,6 +15,7 @@
     {
       "blog_name": "Industrial (English)",
       "BLOG_ID": "6321192511447492789",
+      "language": "en",
       "rss_feeds": [
         "https://news.google.com/rss/search?q=industrial+machinery&hl=en-US&gl=US&ceid=US:en"
       ],
@@ -23,6 +25,7 @@
     {
       "blog_name": "Machine & Mechanical Design (ใหม่)",
       "BLOG_ID": "7707792750976542809",
+      "language": "en",
       "rss_feeds": [
         "https://news.google.com/rss/search?q=machine+design&hl=en-US&gl=US&ceid=US:en"
       ],
@@ -32,6 +35,7 @@
     {
       "blog_name": "Knowledge Engineering (ใหม่)",
       "BLOG_ID": "2962551177226991802",
+      "language": "en",
       "rss_feeds": [
         "https://news.google.com/rss/search?q=engineering+technology&hl=en-US&gl=US&ceid=US:en"
       ],
@@ -41,6 +45,7 @@
     {
       "blog_name": "CNC Machine Center (ใหม่)",
       "BLOG_ID": "2882579450350054162",
+      "language": "th",
       "rss_feeds": [
         "https://news.google.com/rss/search?q=CNC+machining&hl=en-US&gl=US&ceid=US:en"
       ],
