@@ -50,7 +50,7 @@ Requirements:
     response = model.generate_content(prompt)
     return response.text
 
-def post_to_blogger(blog_id, title, content_html, access_token):
+def post_to_blogger(blog_id, title, content_html, labels, access_token):
     url = f"https://www.googleapis.com/blogger/v3/blogs/{blog_id}/posts/"
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -59,7 +59,8 @@ def post_to_blogger(blog_id, title, content_html, access_token):
     data = {
         "kind": "blogger#post",
         "title": title,
-        "content": content_html
+        "content": content_html,
+        "labels": labels
     }
     res = requests.post(url, headers=headers, json=data)
     return res.status_code, res.json()
@@ -67,32 +68,38 @@ def post_to_blogger(blog_id, title, content_html, access_token):
 def main():
     print("Starting AI News Bot...")
     
-    blog_id = config.get("BLOG_ID")
     access_token = os.getenv("BLOGGER_ACCESS_TOKEN")
+    blogs = config.get("blogs", [])
     
-    for feed_info in config.get("RSS_FEEDS", []):
-        feed_url = feed_info.get("url")
-        language = feed_info.get("language", "th")
+    for blog in blogs:
+        blog_name = blog.get("blog_name")
+        blog_id = blog.get("BLOG_ID")
+        language = blog.get("language", "th")
+        rss_feeds = blog.get("rss_feeds", [])
+        labels = blog.get("blogger_labels", [])
         
-        print(f"Fetching news from: {feed_url}")
-        title, link, summary = fetch_rss_news(feed_url)
+        print(f"Processing Blog: {blog_name} (ID: {blog_id})")
         
-        if not title:
-            print("No news found.")
-            continue
+        for feed_url in rss_feeds:
+            print(f"Fetching news from: {feed_url}")
+            title, link, summary = fetch_rss_news(feed_url)
             
-        print(f"Generating article for: {title}")
-        article_content = generate_article(title, summary, language)
-        
-        html_content = f"<p>แหล่งที่มา: <a href='{link}'>อ่านเพิ่มเติมที่นี่</a></p>" + article_content
-        
-        print("Posting to Blogger...")
-        status_code, res_data = post_to_blogger(blog_id, title, html_content, access_token)
-        
-        if status_code == 200:
-            print(f"Successfully posted: {title}")
-        else:
-            print(f"Failed to post: {res_data}")
+            if not title:
+                print("No news found.")
+                continue
+                
+            print(f"Generating article for: {title}")
+            article_content = generate_article(title, summary, language)
+            
+            html_content = f"<p>แหล่งที่มา: <a href='{link}'>อ่านเพิ่มเติมที่นี่</a></p>" + article_content
+            
+            print("Posting to Blogger...")
+            status_code, res_data = post_to_blogger(blog_id, title, html_content, labels, access_token)
+            
+            if status_code == 200:
+                print(f"Successfully posted: {title}")
+            else:
+                print(f"Failed to post: {res_data}")
 
     print("AI News Bot completed.")
 
