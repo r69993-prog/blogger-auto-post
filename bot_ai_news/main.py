@@ -66,7 +66,34 @@ def post_to_blogger(blog_id, title, content_html, access_token):
 
 def main():
     print("Starting AI News Bot...")
-    # Code execution flow
+    
+    blog_id = config.get("BLOG_ID")
+    access_token = os.getenv("BLOGGER_ACCESS_TOKEN")
+    
+    for feed_info in config.get("RSS_FEEDS", []):
+        feed_url = feed_info.get("url")
+        language = feed_info.get("language", "th")
+        
+        print(f"Fetching news from: {feed_url}")
+        title, link, summary = fetch_rss_news(feed_url)
+        
+        if not title:
+            print("No news found.")
+            continue
+            
+        print(f"Generating article for: {title}")
+        article_content = generate_article(title, summary, language)
+        
+        html_content = f"<p>แหล่งที่มา: <a href='{link}'>อ่านเพิ่มเติมที่นี่</a></p>" + article_content
+        
+        print("Posting to Blogger...")
+        status_code, res_data = post_to_blogger(blog_id, title, html_content, access_token)
+        
+        if status_code == 200:
+            print(f"Successfully posted: {title}")
+        else:
+            print(f"Failed to post: {res_data}")
+
     print("AI News Bot completed.")
 
 if __name__ == "__main__":
