@@ -4,6 +4,7 @@ import random
 import time
 import googleapiclient.discovery
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 import pickle
@@ -79,7 +80,7 @@ def generate_simple_content(video_info, keyword, blog_config):
         'labels': labels
     }
 
-def post_to_blogger(blogger_service, blog_id, post_data):
+def post_to_blogger_with_retry(blogger_service, blog_id, post_data, max_retries=3):
     body = {
         'kind': 'blogger#post',
         'title': post_data['title'],
@@ -87,9 +88,22 @@ def post_to_blogger(blogger_service, blog_id, post_data):
         'labels': post_data['labels']
     }
     posts = blogger_service.posts()
-    request = posts.insert(blogId=blog_id, body=body)
-    response = request.execute()
-    return response
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            request = posts.insert(blogId=blog_id, body=body)
+            response = request.execute()
+            return response
+        except HttpError as e:
+            if e.resp.status == 429:
+                if attempt < max_retries:
+                    wait_time = attempt * 60
+                    print(f"Rate limit hit (429). Retrying in {wait_time} seconds... (Attempt {attempt}/{max_retries})")
+                    time.sleep(wait_time)
+                else:
+                    raise e
+            else:
+                raise e
 
 def main():
     config_path = os.path.join(os.path.dirname(__file__), 'config.json')
@@ -116,7 +130,7 @@ def main():
             post_data = generate_simple_content(video_info, keyword, blog)
             
             try:
-                res = post_to_blogger(blogger_service, blog.get('BLOG_ID'), post_data)
+                res = post_to_blogger_with_retry(blogger_service, blog.get('BLOG_ID'), post_data)
                 print(f"SUCCESS: Posted to Blog ID: {blog.get('BLOG_ID')}")
                 print(f"Post URL: {res.get('url')}")
                 print(f"Post Title: {res.get('title')}")
@@ -126,8 +140,8 @@ def main():
             print("No video found.")
             
         if idx < len(blogs):
-            print("Waiting 15 seconds before processing next blog...")
-            time.sleep(15)
+            print("Waiting 30 seconds before processing next blog...")
+            time.sleep(30)
 
 if __name__ == '__main__':
     main()
