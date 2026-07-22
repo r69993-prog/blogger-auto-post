@@ -3,7 +3,7 @@ import os
 import re
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-import google.generativeai as genai
+from google import genai
 
 # Load configuration paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -56,8 +56,7 @@ def generate_blog_content(gemini_api_key, video, search_query, language="TH"):
         if not cleaned_gemini_key:
             raise ValueError("gemini_api_key is missing or empty after cleaning")
             
-        genai.configure(api_key=cleaned_gemini_key)
-        model = genai.GenerativeModel("gemini-pro")
+        client = genai.Client(api_key=cleaned_gemini_key)
 
         prompt = f"""
         คุณคือ Senior Content Creator และ SEO Specialist
@@ -82,7 +81,10 @@ def generate_blog_content(gemini_api_key, video, search_query, language="TH"):
         }}
         """
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
         text = response.text.strip()
         
         # Clean potential markdown code blocks
@@ -101,7 +103,7 @@ def generate_blog_content(gemini_api_key, video, search_query, language="TH"):
         print("Using fallback content generator...")
         return {
             "title": f"{video['title']} - {search_query}",
-            "content_html": f"<h2>{video['title']}</h2><p><img src='{video['thumbnail']}' alt='Cover' style='max-width:100%; height:auto;' /></p><p>{video['description']}</p><p><iframe width='560' height='315' src='[https://www.youtube.com/embed/](https://www.youtube.com/embed/){video['id']}' frameborder='0' allowfullscreen></iframe></p>",
+            "content_html": f"2>{video['title']}</h2><p><img src='{video['thumbnail']}' alt='Cover' style='max-width:100%; height:auto;' /></p><p>{video['description']}</p><p><iframe width='560' height='315' src='[https://www.youtube.com/embed/](https://www.youtube.com/embed/){video['id']}' frameborder='0' allowfullscreen></iframe></p>",
             "labels": [search_query, "YouTube", "Video"]
         }
 
