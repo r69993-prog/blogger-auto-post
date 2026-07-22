@@ -2,6 +2,7 @@ import os
 import json
 import random
 import time
+import sys
 import googleapiclient.discovery
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -80,7 +81,7 @@ def generate_simple_content(video_info, keyword, blog_config):
         'labels': labels
     }
 
-def post_to_blogger_with_retry(blogger_service, blog_id, post_data, max_retries=3):
+def post_to_blogger(blogger_service, blog_id, post_data):
     body = {
         'kind': 'blogger#post',
         'title': post_data['title'],
@@ -88,22 +89,9 @@ def post_to_blogger_with_retry(blogger_service, blog_id, post_data, max_retries=
         'labels': post_data['labels']
     }
     posts = blogger_service.posts()
-    
-    for attempt in range(1, max_retries + 1):
-        try:
-            request = posts.insert(blogId=blog_id, body=body)
-            response = request.execute()
-            return response
-        except HttpError as e:
-            if e.resp.status == 429:
-                if attempt < max_retries:
-                    wait_time = attempt * 60
-                    print(f"Rate limit hit (429). Retrying in {wait_time} seconds... (Attempt {attempt}/{max_retries})")
-                    time.sleep(wait_time)
-                else:
-                    raise e
-            else:
-                raise e
+    request = posts.insert(blogId=blog_id, body=body)
+    response = request.execute()
+    return response
 
 def main():
     config_path = os.path.join(os.path.dirname(__file__), 'config.json')
@@ -114,7 +102,13 @@ def main():
     blogger_service = get_blogger_service()
     
     blogs = config.get('blogs', [])
+    quota_exceeded = False
+
     for idx, blog in enumerate(blogs, start=1):
+        if quota_exceeded:
+            print(f"\nSkipping Blog #{idx} due to daily Blogger API quota limit.")
+            continue
+
         print(f"\n--- Processing Blog #{idx} (Name: {blog.get('blog_name')} | ID: {blog.get('BLOG_ID')}) ---")
         keywords = blog.get('youtube_search_keywords', [])
         if not keywords:
@@ -130,18 +124,24 @@ def main():
             post_data = generate_simple_content(video_info, keyword, blog)
             
             try:
-                res = post_to_blogger_with_retry(blogger_service, blog.get('BLOG_ID'), post_data)
+                res = post_to_blogger(blogger_service, blog.get('BLOG_ID'), post_data)
                 print(f"SUCCESS: Posted to Blog ID: {blog.get('BLOG_ID')}")
                 print(f"Post URL: {res.get('url')}")
                 print(f"Post Title: {res.get('title')}")
+            except HttpError as e:
+                if e.resp.status == 429:
+                    print("\n[CRITICAL] Blogger API Daily Quota Exceeded (429). Stop processing remaining blogs for today.")
+                    quota_exceeded = True
+                else:
+                    print(f"Failed to post to Blogger: {e}")
             except Exception as e:
                 print(f"Failed to post to Blogger: {e}")
         else:
             print("No video found.")
             
-        if idx < len(blogs):
-            print("Waiting 30 seconds before processing next blog...")
-            time.sleep(30)
+        if idx < len(blogs) and not quota_exceeded:
+            print("Waiting 10 seconds before processing next blog...")
+            time.sleep(10)
 
 if __name__ == '__main__':
     main()
