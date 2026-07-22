@@ -2,7 +2,6 @@ import os
 import json
 import random
 import time
-import sys
 import googleapiclient.discovery
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -106,7 +105,7 @@ def main():
 
     for idx, blog in enumerate(blogs, start=1):
         if quota_exceeded:
-            print(f"\nSkipping Blog #{idx} due to daily Blogger API quota limit.")
+            print(f"\nSkipping Blog #{idx} (Name: {blog.get('blog_name')}) due to daily Blogger API quota limit.")
             continue
 
         print(f"\n--- Processing Blog #{idx} (Name: {blog.get('blog_name')} | ID: {blog.get('BLOG_ID')}) ---")
@@ -130,7 +129,7 @@ def main():
                 print(f"Post Title: {res.get('title')}")
             except HttpError as e:
                 if e.resp.status == 429:
-                    print("\n[CRITICAL] Blogger API Daily Quota Exceeded (429). Stop processing remaining blogs for today.")
+                    print("\n[CRITICAL] Blogger API Daily Quota Exceeded (429). Stopping process for today.")
                     quota_exceeded = True
                 else:
                     print(f"Failed to post to Blogger: {e}")
