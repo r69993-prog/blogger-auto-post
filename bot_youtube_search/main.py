@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import time
 import googleapiclient.discovery
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
@@ -123,6 +124,10 @@ def main():
                 print(f"Failed to post to Blogger: {e}")
         else:
             print("No video found.")
+            
+        if idx < len(blogs):
+            print("Waiting 15 seconds before processing next blog...")
+            time.sleep(15)
 
 if __name__ == '__main__':
     main()
