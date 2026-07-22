@@ -1,177 +1,127 @@
-import json
 import os
-import re
-from google.oauth2.credentials import Credentials
+import json
+import random
+import googleapiclient.discovery
 from googleapiclient.discovery import build
-from google import genai
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+import pickle
 
-# Load configuration paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
-TOKEN_PATH = os.path.join(BASE_DIR, "token.pickle")
-
-def load_config():
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def clean_key(key):
-    if not key:
-        return ""
-    cleaned = re.sub(r'[^\x00-\x7F]+', '', str(key))
-    return cleaned.replace('"', '').replace("'", "").strip()
+SCOPES = ['https://www.googleapis.com/auth/blogger']
 
 def get_blogger_service():
-    import pickle
-    with open(TOKEN_PATH, "rb") as token:
-        creds = pickle.load(token)
-    return build("blogger", "v3", credentials=creds)
+    creds = None
+    if os.path.exists('token.pickle'):
+        with open('token.pickle', 'rb') as token:
+            creds = pickle.load(token)
+            
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            with open('token.pickle', 'wb') as token:
+                pickle.dump(creds, token)
+        else:
+            raise Exception("token.pickle Invalid or Expired")
 
-def search_youtube_videos(api_key, query, max_results=5):
-    youtube = build("youtube", "v3", developerKey=api_key)
+    return build('blogger', '3', credentials=creds)
+
+def search_youtube_video(keyword, youtube_api_key):
+    youtube = build('youtube', '3', developerKey=youtube_api_key)
     request = youtube.search().list(
-        q=query,
-        part="snippet",
-        type="video",
-        maxResults=max_results,
-        relevanceLanguage="th"
+        q=keyword,
+        part='snippet',
+        maxResults=10,
+        type='video',
+        order='date'
     )
     response = request.execute()
-    videos = []
-    for item in response.get("items", []):
-        video_id = item["id"]["videoId"]
-        snippet = item["snippet"]
-        thumbnail = snippet["thumbnails"].get("high", {}).get("url", "")
-        videos.append({
-            "id": video_id,
-            "title": snippet["title"],
-            "description": snippet["description"],
-            "thumbnail": thumbnail,
-            "url": f"https://www.youtube.com/watch?v={video_id}"
-        })
-    return videos
-
-def generate_blog_content(gemini_api_key, video, search_query, language="TH"):
-    try:
-        cleaned_gemini_key = clean_key(gemini_api_key)
-        if not cleaned_gemini_key:
-            raise ValueError("gemini_api_key is missing or empty after cleaning")
-            
-        client = genai.Client(api_key=cleaned_gemini_key)
-
-        prompt = f"""
-        คุณคือ Senior Content Creator และ SEO Specialist
-        สร้างบทความจากคลิปวิดีโอ YouTube ดังนี้:
-        - หัวข้อคลิป: {video['title']}
-        - คำอธิบายคลิป: {video['description']}
-        - ลิงก์รูปภาพปก: {video['thumbnail']}
-        - ลิงก์ฝังคลิป: https://www.youtube.com/embed/{video['id']}
-        - คีย์เวิร์ดค้นหา: {search_query}
-        - ภาษาหลักของบทความ: {language}
-
-        คำสั่งในการสร้างเนื้อหาภาษา {language}:
-        ส่วนที่ 1 (title): สร้างหัวข้อบทความที่ดึงดูด ทำ SEO ใส่ Keyword เป็นธรรมชาติและน่าสนใจไม่ซ้ำใคร
-        ส่วนที่ 2 (content_html): เขียนบทความภาษา {language} จัดวางโครงสร้างสวยงาม มีหัวข้อรอง (h2, h3) เนื้อหารายละเอียด อ่านง่าย โดยในเนื้อหาต้องใส่รูปปก <img src="{video['thumbnail']}" style="max-width:100%; height:auto;" /> และฝังวิดีโอ <iframe width="560" height="315" src="https://www.youtube.com/embed/{video['id']}" frameborder="0" allowfullscreen></iframe>
-        ส่วนที่ 3 (labels): กำหนดป้ายกำกับ Label ที่เกี่ยวข้อง แยกหมวดหมู่ชัดเจน ความยาวไม่เกิน 4 คำต่อ Label (ให้คืนค่าเป็นอาร์เรย์ของสตริง)
-
-        ให้ตอบกลับเป็นโครงสร้าง JSON ดังนี้เท่านั้น:
-        {{
-          "title": "...",
-          "content_html": "...",
-          "labels": ["คำที่1", "คำที่2", "คำที่3"]
-        }}
-        """
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        text = response.text.strip()
-        
-        # Clean potential markdown code blocks
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
-
-        data = json.loads(text)
-        return data
-    except Exception as e:
-        print(f"Gemini API Error or JSON Parse Error: {e}")
-        print("Using fallback content generator...")
+    items = response.get('items', [])
+    if items:
+        selected_item = random.choice(items)
+        video_id = selected_item['id']['videoId']
+        title = selected_item['snippet']['title']
+        description = selected_item['snippet']['description']
         return {
-            "title": f"{video['title']} - {search_query}",
-            "content_html": f"2>{video['title']}</h2><p><img src='{video['thumbnail']}' alt='Cover' style='max-width:100%; height:auto;' /></p><p>{video['description']}</p><p><iframe width='560' height='315' src='[https://www.youtube.com/embed/](https://www.youtube.com/embed/){video['id']}' frameborder='0' allowfullscreen></iframe></p>",
-            "labels": [search_query, "YouTube", "Video"]
+            'video_id': video_id,
+            'title': title,
+            'description': description,
+            'url': f"https://www.youtube.com/watch?v={video_id}"
         }
+    return None
 
-def post_to_blogger(service, blog_id, title, content_html, labels):
-    try:
-        body = {
-            "kind": "blogger#post",
-            "title": title,
-            "content": content_html,
-            "labels": labels
-        }
-        posts = service.posts()
-        result = posts.insert(blogId=blog_id, body=body).execute()
-        print(f"SUCCESS: Posted to Blog ID: {blog_id}")
-        print(f"Post URL: {result.get('url')}")
-        print(f"Post Title: {result.get('title')}")
-    except Exception as e:
-        print(f"ERROR posting to Blog ID {blog_id}: {e}")
+def generate_simple_content(video_info, keyword, blog_config):
+    video_id = video_info['video_id']
+    video_title = video_info['title']
+    video_desc = video_info['description']
+    suffix = blog_config.get('seo_title_suffix', '')
+    
+    title = f"{video_title} - {suffix}" if suffix else video_title
+    
+    content = f"""
+<div style="text-align: center; margin-bottom: 20px;">
+    <iframe width="100%" height="450" src="https://www.youtube.com/embed/{video_id}" frameborder="0" allowfullscreen></iframe>
+</div>
+<div style="font-family: Arial, sans-serif; line-height: 1.6;">
+    <h2>{video_title}</h2>
+    <p>{video_desc}</p>
+    <p>Watch full video on YouTube: <a href="{video_info['url']}" target="_blank">{video_info['url']}</a></p>
+</div>
+"""
+    labels = blog_config.get('blogger_labels', ['YouTube', 'Video'])
+    if keyword not in labels:
+        labels.append(keyword)
+        
+    return {
+        'title': title,
+        'content': content,
+        'labels': labels
+    }
+
+def post_to_blogger(blogger_service, blog_id, post_data):
+    body = {
+        'kind': 'blogger#post',
+        'title': post_data['title'],
+        'content': post_data['content'],
+        'labels': post_data['labels']
+    }
+    posts = blogger_service.posts()
+    request = posts.insert(blogId=blog_id, body=body)
+    response = request.execute()
+    return response
 
 def main():
-    config = load_config()
+    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+        
+    youtube_api_key = config.get('YOUTUBE_API_KEY')
     blogger_service = get_blogger_service()
     
-    gemini_key = config.get("gemini_api_key")
-    youtube_key = clean_key(config.get("YOUTUBE_API_KEY"))
-    
-    cleaned_gemini = clean_key(gemini_key)
-    if cleaned_gemini:
-        print(f"Explicit Config Gemini Key Loaded (Cleaned): {cleaned_gemini[:8]}...")
-    else:
-        print("ERROR: gemini_api_key is completely missing in config.json")
-        
-    blogs = config.get("blogs", [])
-    print(f"Total blogs in config: {len(blogs)}")
-    
-    for index, blog in enumerate(blogs):
-        blog_id = blog.get("BLOG_ID") or blog.get("blog_id") or blog.get("blogId") or blog.get("id")
-        print(f"\n--- Processing Blog #{index + 1} (Name: {blog.get('blog_name', '')} | ID: {blog_id}) ---")
-        if not blog_id:
-            print("Skipping blog entry: missing blog_id")
+    blogs = config.get('blogs', [])
+    for idx, blog in enumerate(blogs, start=1):
+        print(f"\n--- Processing Blog #{idx} (Name: {blog.get('blog_name')} | ID: {blog.get('BLOG_ID')}) ---")
+        keywords = blog.get('youtube_search_keywords', [])
+        if not keywords:
             continue
-
-        keywords = blog.get("youtube_search_keywords") or blog.get("keywords", ["ข่าวด่วน"])
-        language = blog.get("language", "TH")
+            
+        keyword = random.choice(keywords)
+        print(f"Searching YouTube for keyword: {keyword}")
+        video_info = search_youtube_video(keyword, youtube_api_key)
         
-        for kw in keywords:
-            print(f"Searching YouTube for keyword: {kw}")
-            videos = search_youtube_videos(youtube_key, kw, max_results=5)
-            if videos:
-                video = videos[0]
-                print(f"Found Video: {video['title']} ({video['url']})")
-                
-                print("Generating content...")
-                content_data = generate_blog_content(gemini_key, video, kw, language)
-                
-                print(f"Generated Title: {content_data.get('title')}")
-                print(f"Generated Labels: {content_data.get('labels')}")
-                
-                post_to_blogger(
-                    service=blogger_service,
-                    blog_id=blog_id,
-                    title=content_data.get("title", video["title"]),
-                    content_html=content_data.get("content_html", ""),
-                    labels=content_data.get("labels", [])
-                )
-                break
-            else:
-                print(f"No videos found for keyword: {kw}")
+        if video_info:
+            print(f"Found Video: {video_info['title']} ({video_info['url']})")
+            print("Generating content without AI...")
+            post_data = generate_simple_content(video_info, keyword, blog)
+            
+            try:
+                res = post_to_blogger(blogger_service, blog.get('BLOG_ID'), post_data)
+                print(f"SUCCESS: Posted to Blog ID: {blog.get('BLOG_ID')}")
+                print(f"Post URL: {res.get('url')}")
+                print(f"Post Title: {res.get('title')}")
+            except Exception as e:
+                print(f"Failed to post to Blogger: {e}")
+        else:
+            print("No video found.")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
