@@ -17,7 +17,6 @@ def load_config():
 def clean_key(key):
     if not key:
         return ""
-    # Remove non-ASCII characters, quotes, and whitespace
     cleaned = re.sub(r'[^\x00-\x7F]+', '', str(key))
     return cleaned.replace('"', '').replace("'", "").strip()
 
@@ -58,10 +57,7 @@ def generate_blog_content(gemini_api_key, video, search_query, language="TH"):
             raise ValueError("gemini_api_key is missing or empty after cleaning")
             
         genai.configure(api_key=cleaned_gemini_key)
-        model = genai.GenerativeModel(
-            "gemini-1.5-flash",
-            generation_config={"response_mime_type": "application/json"}
-        )
+        model = genai.GenerativeModel("gemini-1.5-flash-latest")
 
         prompt = f"""
         คุณคือ Senior Content Creator และ SEO Specialist
@@ -88,6 +84,16 @@ def generate_blog_content(gemini_api_key, video, search_query, language="TH"):
 
         response = model.generate_content(prompt)
         text = response.text.strip()
+        
+        # Clean potential markdown code blocks
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+
         data = json.loads(text)
         return data
     except Exception as e:
@@ -95,7 +101,7 @@ def generate_blog_content(gemini_api_key, video, search_query, language="TH"):
         print("Using fallback content generator...")
         return {
             "title": f"{video['title']} - {search_query}",
-            "content_html": f"<h2>{video['title']}</h2><p><img src='{video['thumbnail']}' alt='Cover' style='max-width:100%; height:auto;' /></p><p>{video['description']}</p><p><iframe width='560' height='315' src='https://www.youtube.com/embed/{video['id']}' frameborder='0' allowfullscreen></iframe></p>",
+            "content_html": f"<h2>{video['title']}</h2><p><img src='{video['thumbnail']}' alt='Cover' style='max-width:100%; height:auto;' /></p><p>{video['description']}</p><p><iframe width='560' height='315' src='[https://www.youtube.com/embed/](https://www.youtube.com/embed/){video['id']}' frameborder='0' allowfullscreen></iframe></p>",
             "labels": [search_query, "YouTube", "Video"]
         }
 
