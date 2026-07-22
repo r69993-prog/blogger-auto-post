@@ -45,10 +45,18 @@ def fetch_latest_news(rss_urls):
             continue
     return None
 
-def generate_ai_summary(news_item, gemini_api_key):
+def generate_ai_summary(news_item, gemini_api_key, language="en"):
     client = genai.Client(api_key=gemini_api_key)
+    
+    if language == "th":
+        lang_instruction = "Write the ENTIRE blog post (title and content) in THAI language (ภาษาไทย)."
+    else:
+        lang_instruction = "Write the ENTIRE blog post (title and content) in ENGLISH language."
+
     prompt = f"""
 Summarize the following news article into a comprehensive blog post in HTML format.
+
+{lang_instruction}
 
 News Title: {news_item['title']}
 Source Link: {news_item['link']}
@@ -57,8 +65,8 @@ Raw Summary: {news_item['summary']}
 Instructions:
 1. Write a compelling blog title and full body content in HTML format.
 2. Structure the body using <h2>, <p>, <ul>, <li>, and <blockquote> tags.
-3. Include an embedded credit back to the source link.
-4. Do NOT wrap the code in ```html or ``` text blocks. Return ONLY the JSON object.
+3. Include an embedded credit back to the source link at the end of the post.
+4. Do NOT wrap the output in ```html or ``` text blocks. Return ONLY a valid JSON object.
 
 JSON Response Format:
 {{
@@ -114,7 +122,7 @@ def main():
             print(f"\nSkipping Blog #{idx} (Name: {blog.get('blog_name')}) due to daily Blogger API quota limit.")
             continue
 
-        print(f"\n--- Processing Blog #{idx} (Name: {blog.get('blog_name')} | ID: {blog.get('BLOG_ID')}) ---")
+        print(f"\n--- Processing Blog #{idx} (Name: {blog.get('blog_name')} | ID: {blog.get('BLOG_ID')} | Lang: {blog.get('language', 'en')}) ---")
         rss_feeds = blog.get('rss_feeds', [])
         if not rss_feeds:
             continue
@@ -125,7 +133,8 @@ def main():
         if news_item:
             print(f"Found News: {news_item['title']}")
             print("Generating AI summary with Gemini...")
-            ai_data = generate_ai_summary(news_item, gemini_api_key)
+            lang = blog.get('language', 'en')
+            ai_data = generate_ai_summary(news_item, gemini_api_key, language=lang)
             
             if ai_data:
                 suffix = blog.get('seo_title_suffix', '')
