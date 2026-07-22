@@ -22,7 +22,7 @@ def fetch_rss_news(feed_url):
 
 def generate_article(title, summary, language="th"):
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-pro")
+    model = genai.GenerativeModel("gemini-1.5-flash")
     
     if language == "en":
         prompt = f"""
