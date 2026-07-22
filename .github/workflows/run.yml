@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies for YouTube Search Bot
         run: |
           python -m pip install --upgrade pip
-          pip install google-generativeai google-api-python-client google-auth-httplib2 google-auth-oauthlib requests
+          python -m pip install google-generativeai google-api-python-client google-auth-httplib2 google-auth-oauthlib requests
 
       - name: Run YouTube Search Bot
         env:
@@ -32,7 +32,7 @@ jobs:
 
       - name: Install dependencies for AI News Bot
         run: |
-          pip install google-generativeai feedparser google-api-python-client google-auth-httplib2 google-auth-oauthlib requests
+          python -m pip install google-generativeai feedparser google-api-python-client google-auth-httplib2 google-auth-oauthlib requests
 
       - name: Run AI News Bot
         env:
