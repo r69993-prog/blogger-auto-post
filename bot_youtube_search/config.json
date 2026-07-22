@@ -1,88 +1,60 @@
 {
-  "YOUTUBE_API_KEY": "AIzaSyDzEoKCgZ7uC7-bBBLl8qE6xV_J7hMgKqo",
-  "gemini_api_key": "AIzaSyCRd59siN1gsDEcwT_zqeMpt_M-XhdZKPY",
-  "time_interval_hours": 2,
+  "YOUTUBE_API_KEY": "",
   "blogs": [
     {
       "blog_name": "ระบบกลไก",
       "BLOG_ID": "7261621395427988771",
-      "language": "TH",
-      "seo_title_suffix": "ระบบกลไก",
-      "max_results_per_run": 2,
-      "youtube_search_keywords": [
-        "Mechanism design",
-        "ระบบกลไก",
-        "Mechanical system",
-        "Transmission system"
+      "language": "th",
+      "keywords": [
+        "กลไกการทำงาน",
+        "ระบบอัตโนมัติ"
       ],
-      "blogger_labels": [
-        "Tech",
-        "Gadget"
-      ]
+      "seo_title_suffix": "ระบบกลไก",
+      "blogger_labels": ["Mechanical", "Engineering", "Video"]
     },
     {
-      "blog_name": " Industrial (English)",
+      "blog_name": "Industrial (English)",
       "BLOG_ID": "6321192511447492789",
-      "language": "EN",
-      "seo_title_suffix": "engineering",
-      "max_results_per_run": 2,
-      "youtube_search_keywords": [
-        "industrial machinery",
-        "mechanical engineering "
+      "language": "en",
+      "keywords": [
+        "Industrial Machinery",
+        "Factory Automation"
       ],
-      "blogger_labels": [
-        "Industrial",
-        "Engineering",
-        "Video"
-      ]
+      "seo_title_suffix": "engineering",
+      "blogger_labels": ["Industry", "Machinery", "Video"]
     },
     {
       "blog_name": "Machine & Mechanical Design (ใหม่)",
       "BLOG_ID": "7707792750976542809",
-      "language": "EN",
-      "seo_title_suffix": "Engineering View",
-      "max_results_per_run": 2,
-      "youtube_search_keywords": [
-        "machine design",
-        "Mechanical system",
-        "Machine homemake"
+      "language": "en",
+      "keywords": [
+        "Machine Design",
+        "Mechanical Design"
       ],
-      "blogger_labels": [
-        "Mechanical",
-        "Design",
-        "Video"
-      ]
+      "seo_title_suffix": "Engineering View",
+      "blogger_labels": ["MachineDesign", "Video"]
     },
     {
       "blog_name": "Knowledge Engineering (ใหม่)",
       "BLOG_ID": "2962551177226991802",
-      "language": "EN",
-      "seo_title_suffix": "Tech Intelligence",
-      "max_results_per_run": 2,
-      "youtube_search_keywords": [
-        "knowledge Engineering",
-        "technology",
-        "Engineering"
+      "language": "en",
+      "keywords": [
+        "Engineering Technology",
+        "Knowledge Engineering"
       ],
-      "blogger_labels": [
-        "Technology",
-        "Knowledge"
-      ]
+      "seo_title_suffix": "",
+      "blogger_labels": ["Knowledge", "Engineering", "Video"]
     },
     {
-      "blog_name": "CNC Machine Center (ใหม่)",
+      "blog_name": "เครื่องCNC",
       "BLOG_ID": "2882579450350054162",
-      "language": "TH",
-      "seo_title_suffix": "เจาะลึกกลไก",
-      "max_results_per_run": 2,
-      "youtube_search_keywords": [
-        "CNC",
-        "CNC Machine"
+      "language": "th",
+      "keywords": [
+        "เครื่อง CNC",
+        "CNC Machining"
       ],
-      "blogger_labels": [
-        "CNC",
-        "Factory"
-      ]
+      "seo_title_suffix": "",
+      "blogger_labels": ["CNC", "Machining", "Video"]
     }
   ]
 }
