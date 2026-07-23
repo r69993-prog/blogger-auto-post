@@ -57,7 +57,6 @@ Format your response strictly as a JSON object with two keys: "content" (string)
         contents=prompt
     )
     
-    # พยายามแปลงผลลัพธ์เป็น JSON เพื่อดึงเนื้อหาและป้ายกำกับแยกกัน
     text_res = response.text.strip()
     if text_res.startswith("```json"):
         text_res = text_res[7:]
@@ -69,7 +68,6 @@ Format your response strictly as a JSON object with two keys: "content" (string)
         data = json.loads(text_res)
         return data.get("content", text_res), data.get("labels", [])
     except Exception:
-        # กรณี AI ตอบกลับมาเป็น HTML ตรงๆ ให้ใช้ค่าสำรอง
         return response.text, ["Tech", "News", "Tutorial", "Review"]
 
 def post_to_blogger(blog_id, title, content_html, labels, access_token):
