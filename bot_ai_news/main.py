@@ -1,7 +1,7 @@
 import os
 import json
-import feedparser
 import requests
+import feedparser
 from google import genai
 
 # Load Config
@@ -12,45 +12,39 @@ with open(CONFIG_PATH, "r", encoding="utf-8") as f:
     config = json.load(f)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+BLOGGER_ACCESS_TOKEN = os.getenv("BLOGGER_ACCESS_TOKEN")
 
-def fetch_rss_news(feed_url):
-    feed = feedparser.parse(feed_url)
-    if feed.entries:
-        entry = feed.entries[0]
-        return entry.title, entry.link, entry.get("summary", "")
-    return None, None, None
-
-def generate_article(title, summary, language="th"):
+def generate_seo_article_and_labels(title, summary):
     client = genai.Client(api_key=GEMINI_API_KEY)
     
-    if language == "en":
-        prompt = f"""
-Write a comprehensive, professional blog post based on this AI news.
-Title: {title}
-Summary: {summary}
+    prompt = f"""
+วิเคราะห์ข่าวนี้แล้วสร้าง 2 อย่าง:
+1. บทความบล็อกฉบับเต็มอย่างละเอียด เป็นมืออาชีพ รองรับ SEO เป็นภาษาไทยทั้งหมด หัวข้อและเนื้อหาต้องเป็นภาษาไทย จัดโครงสร้างด้วยแท็ก HTML (เช่น <h2>, <p>, <ul>, <li>, <strong>)
+2. ป้ายกำกับ (Labels) จำนวน 4 คำที่ไม่ซ้ำกัน ซึ่งเกี่ยวข้องกับเนื้อหาในข่าว
 
-Requirements:
-- Article MUST be entirely in English language.
-- Provide a clear introduction, detailed body paragraphs explaining the concept, key takeaways, and a conclusion.
-- Do NOT use Markdown headers or bold text formatting. Use plain clean HTML paragraphs (<p>).
-"""
-    else:
-        prompt = f"""
-เขียนบทความบล็อกฉบับเต็มอย่างละเอียดยาวและเป็นมืออาชีพจากข่าว AI นี้
-หัวข้อ: {title}
+หัวข้อข่าว: {title}
 เนื้อหาย่อ: {summary}
 
-ข้อกำหนด:
-- บทความต้องเป็นภาษาไทยทั้งหมด 100%
-- สรุปเนื้อหาสำคัญ อธิบายรายละเอียดอย่างชัดเจน อธิบายความเป็นมา ผลกระทบ และสรุปภาพรวม
-- ห้ามใช้ Markdown ให้ใช้แท็ก HTML <p> สำหรับย่อหน้าทั่วไปเท่านั้น
+ส่งออกผลลัพธ์เป็น JSON object ที่มี 2 คีย์เท่านั้น คือ "content" (สตริง HTML) และ "labels" (อาเรย์ของสตริง 4 คำ) ห้ามใส่ markdown block ครอบ
 """
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
+        model='gemini-2.5-flash',
+        contents=prompt
     )
-    return response.text
+    
+    text_res = response.text.strip()
+    if text_res.startswith("```json"):
+        text_res = text_res[7:]
+    if text_res.endswith("```"):
+        text_res = text_res[:-3]
+    text_res = text_res.strip()
+    
+    try:
+        data = json.loads(text_res)
+        return data.get("content", text_res), data.get("labels", [])
+    except Exception:
+        return response.text, ["ข่าวเทคโนโลยี", "ปัญญาประดิษฐ์", "นวัตกรรม", "ไอที"]
 
 def post_to_blogger(blog_id, title, content_html, labels, access_token):
     url = f"https://www.googleapis.com/blogger/v3/blogs/{blog_id}/posts/"
@@ -70,38 +64,32 @@ def post_to_blogger(blog_id, title, content_html, labels, access_token):
 def main():
     print("Starting AI News Bot...")
     
-    access_token = os.getenv("BLOGGER_ACCESS_TOKEN")
     blogs = config.get("blogs", [])
-    
     for blog in blogs:
-        blog_name = blog.get("blog_name")
-        blog_id = blog.get("BLOG_ID")
-        language = blog.get("language", "th")
-        rss_feeds = blog.get("rss_feeds", [])
-        labels = blog.get("blogger_labels", [])
+        blog_id = blog.get("blog_id")
+        rss_url = blog.get("rss_url")
         
-        print(f"Processing Blog: {blog_name} (ID: {blog_id})")
+        print(f"Processing Blog ID: {blog_id} from RSS: {rss_url}")
+        feed = feedparser.parse(rss_url)
         
-        for feed_url in rss_feeds:
-            print(f"Fetching news from: {feed_url}")
-            title, link, summary = fetch_rss_news(feed_url)
+        if not feed.entries:
+            print("No news found.")
+            continue
             
-            if not title:
-                print("No news found.")
-                continue
-                
-            print(f"Generating article for: {title}")
-            article_content = generate_article(title, summary, language)
-            
-            html_content = f"<p>แหล่งที่มา: <a href='{link}'>อ่านเพิ่มเติมที่นี่</a></p>" + article_content
-            
-            print("Posting to Blogger...")
-            status_code, res_data = post_to_blogger(blog_id, title, html_content, labels, access_token)
-            
-            if status_code == 200:
-                print(f"Successfully posted: {title}")
-            else:
-                print(f"Failed to post: {res_data}")
+        entry = feed.entries[0]
+        title = entry.title
+        summary = entry.get('summary', title)
+        
+        print(f"Generating SEO article and labels for: {title}")
+        article_html, labels = generate_seo_article_and_labels(title, summary)
+        
+        post_title = f"สรุปข่าว: {title}"
+        
+        status_code, response_data = post_to_blogger(blog_id, post_title, article_html, labels, BLOGGER_ACCESS_TOKEN)
+        if status_code == 200:
+            print(f"Successfully posted to Blogger with labels {labels}: {post_title}")
+        else:
+            print(f"Failed to post ({status_code}): {response_data}")
 
     print("AI News Bot completed.")
 
