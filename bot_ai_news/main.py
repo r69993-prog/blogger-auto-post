@@ -15,16 +15,11 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 BLOGGER_ACCESS_TOKEN = os.getenv("BLOGGER_ACCESS_TOKEN")
 
 def extract_image_url(entry):
-    """
-    ดึงลิงก์รูปภาพจาก RSS Entry (รองรับ media_content, enclosures และลิงก์ใน summary)
-    """
-    # ตรวจสอบจาก media_content
     if hasattr(entry, 'media_content') and entry.media_content:
         for media in entry.media_content:
             if 'url' in media:
                 return media['url']
                 
-    # ตรวจสอบจาก enclosures
     if hasattr(entry, 'enclosures') and entry.enclosures:
         for enc in entry.enclosures:
             if 'type' in enc and 'image' in enc['type'] and 'href' in enc:
