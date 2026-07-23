@@ -2,7 +2,7 @@ import os
 import json
 import requests
 from googleapiclient.discovery import build
-import google.generativeai as genai
+from google import genai
 
 # Load Config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -13,6 +13,7 @@ with open(CONFIG_PATH, "r", encoding="utf-8") as f:
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+BLOGGER_ACCESS_TOKEN = os.getenv("BLOGGER_ACCESS_TOKEN")
 
 def get_youtube_videos(query, max_results=1):
     youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
@@ -25,37 +26,53 @@ def get_youtube_videos(query, max_results=1):
     response = request.execute()
     return response.get("items", [])
 
-def generate_article(title, description, language="th"):
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+def generate_seo_article_and_labels(title, description, language="th"):
+    client = genai.Client(api_key=GEMINI_API_KEY)
     
     if language == "en":
         prompt = f"""
-Write a comprehensive, professional blog post based on this YouTube video.
-Title: {title}
-Description: {description}
+Analyze the following YouTube video and generate two things:
+1. A comprehensive, professional, and SEO-optimized blog post in English using clean HTML tags (such as <h2>, <p>, <ul>, <li>, <strong>).
+2. Exactly 4 unique, relevant labels (tags) related to the content, separated by commas.
 
-Requirements:
-- Article MUST be entirely in English language.
-- Provide a clear introduction, detailed body paragraphs explaining the concept, key takeaways, and a conclusion.
-- Do NOT use Markdown headers or bold text formatting. Use plain clean HTML paragraphs (<p>).
+Video Title: {title}
+Video Description: {description}
+
+Format your response strictly as a JSON object with two keys: "content" (string) and "labels" (array of 4 strings). Do not wrap in markdown code blocks.
 """
     else:
         prompt = f"""
-เขียนบทความบล็อกฉบับเต็มอย่างละเอียดยาวและเป็นมืออาชีพจากวิดีโอ YouTube นี้
-หัวข้อ: {title}
-รายละเอียด: {description}
+วิเคราะห์วิดีโอ YouTube นี้แล้วสร้าง 2 อย่าง:
+1. บทความบล็อกฉบับเต็มอย่างละเอียด เป็นมืออาชีพ รองรับ SEO เป็นภาษาไทยทั้งหมด จัดโครงสร้างด้วยแท็ก HTML (เช่น <h2>, <p>, <ul>, <li>, <strong>)
+2. ป้ายกำกับ (Labels) จำนวน exactamente 4 คำที่ไม่ซ้ำกัน ซึ่งเกี่ยวข้องกับเนื้อหาในวิดีโอ
 
-ข้อกำหนด:
-- บทความต้องเป็นภาษาไทยทั้งหมด 100%
-- สรุปเนื้อหาสำคัญ อธิบายรายละเอียดอย่างชัดเจน อธิบายความเป็นมา ข้อดี ข้อเสีย และสรุปภาพรวม
-- ห้ามใช้ Markdown ให้ใช้แท็ก HTML <p> สำหรับย่อหน้าทั่วไปเท่านั้น
+หัวข้อวิดีโอ: {title}
+รายละเอียดวิดีโอ: {description}
+
+ส่งออกผลลัพธ์เป็น JSON object ที่มี 2 คีย์เท่านั้น คือ "content" (สตริง HTML) และ "labels" (อาเรย์ของสตริง 4 คำ) ห้ามใส่ markdown block ครอบ
 """
 
-    response = model.generate_content(prompt)
-    return response.text
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt
+    )
+    
+    # พยายามแปลงผลลัพธ์เป็น JSON เพื่อดึงเนื้อหาและป้ายกำกับแยกกัน
+    text_res = response.text.strip()
+    if text_res.startswith("```json"):
+        text_res = text_res[7:]
+    if text_res.endswith("```"):
+        text_res = text_res[:-3]
+    text_res = text_res.strip()
+    
+    try:
+        data = json.loads(text_res)
+        return data.get("content", text_res), data.get("labels", [])
+    except Exception:
+        # กรณี AI ตอบกลับมาเป็น HTML ตรงๆ ให้ใช้ค่าสำรอง
+        return response.text, ["Tech", "News", "Tutorial", "Review"]
 
-def post_to_blogger(blog_id, title, content_html, access_token):
+def post_to_blogger(blog_id, title, content_html, labels, access_token):
     url = f"https://www.googleapis.com/blogger/v3/blogs/{blog_id}/posts/"
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -64,14 +81,44 @@ def post_to_blogger(blog_id, title, content_html, access_token):
     data = {
         "kind": "blogger#post",
         "title": title,
-        "content": content_html
+        "content": content_html,
+        "labels": labels
     }
     res = requests.post(url, headers=headers, json=data)
     return res.status_code, res.json()
 
 def main():
     print("Starting YouTube Search Bot...")
-    # Code execution flow
+    
+    blogs = config.get("blogs", [])
+    for blog in blogs:
+        blog_id = blog.get("blog_id")
+        query = blog.get("query")
+        language = blog.get("language", "th")
+        
+        print(f"Processing Blog ID: {blog_id} with query: {query} (Language: {language})")
+        videos = get_youtube_videos(query, max_results=1)
+        
+        if not videos:
+            print("No videos found.")
+            continue
+            
+        video = videos[0]
+        snippet = video.get("snippet", {})
+        title = snippet.get("title")
+        description = snippet.get("description")
+        
+        print(f"Generating SEO article and labels for video: {title}")
+        article_html, labels = generate_seo_article_and_labels(title, description, language)
+        
+        post_title = f"Review: {title}" if language == "en" else f"สรุปและรีวิว: {title}"
+        
+        status_code, response_data = post_to_blogger(blog_id, post_title, article_html, labels, BLOGGER_ACCESS_TOKEN)
+        if status_code == 200:
+            print(f"Successfully posted to Blogger with labels {labels}: {post_title}")
+        else:
+            print(f"Failed to post ({status_code}): {response_data}")
+
     print("YouTube Search Bot completed.")
 
 if __name__ == "__main__":
