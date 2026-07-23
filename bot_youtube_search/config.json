@@ -1,60 +1,29 @@
 {
-  "YOUTUBE_API_KEY": "",
   "blogs": [
     {
-      "blog_name": "ระบบกลไก",
-      "BLOG_ID": "7261621395427988771",
-      "language": "th",
-      "keywords": [
-        "กลไกการทำงาน",
-        "ระบบอัตโนมัติ"
-      ],
-      "seo_title_suffix": "ระบบกลไก",
-      "blogger_labels": ["Mechanical", "Engineering", "Video"]
+      "blog_id": "7261621395427988771",
+      "query": "กลไกการทำงาน",
+      "language": "th"
     },
     {
-      "blog_name": "Industrial (English)",
-      "BLOG_ID": "6321192511447492789",
-      "language": "en",
-      "keywords": [
-        "Industrial Machinery",
-        "Factory Automation"
-      ],
-      "seo_title_suffix": "engineering",
-      "blogger_labels": ["Industry", "Machinery", "Video"]
+      "blog_id": "6321192511447492789",
+      "query": "Industrial Machinery",
+      "language": "en"
     },
     {
-      "blog_name": "Machine & Mechanical Design (ใหม่)",
-      "BLOG_ID": "7707792750976542809",
-      "language": "en",
-      "keywords": [
-        "Machine Design",
-        "Mechanical Design"
-      ],
-      "seo_title_suffix": "Engineering View",
-      "blogger_labels": ["MachineDesign", "Video"]
+      "blog_id": "7707792750976542809",
+      "query": "Machine Design",
+      "language": "en"
     },
     {
-      "blog_name": "Knowledge Engineering (ใหม่)",
-      "BLOG_ID": "2962551177226991802",
-      "language": "en",
-      "keywords": [
-        "Engineering Technology",
-        "Knowledge Engineering"
-      ],
-      "seo_title_suffix": "",
-      "blogger_labels": ["Knowledge", "Engineering", "Video"]
+      "blog_id": "2962551177226991802",
+      "query": "Knowledge Engineering",
+      "language": "en"
     },
     {
-      "blog_name": "เครื่องCNC",
-      "BLOG_ID": "2882579450350054162",
-      "language": "th",
-      "keywords": [
-        "เครื่อง CNC",
-        "CNC Machining"
-      ],
-      "seo_title_suffix": "",
-      "blogger_labels": ["CNC", "Machining", "Video"]
+      "blog_id": "2882579450350054162",
+      "query": "เครื่อง CNC",
+      "language": "th"
     }
   ]
 }
