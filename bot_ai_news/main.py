@@ -2,6 +2,7 @@ import os
 import json
 import base64
 import pickle
+import time
 import requests
 import feedparser
 from google import genai
@@ -140,6 +141,8 @@ def main():
                 print(f"Successfully posted to Blogger with labels {labels}: {post_title}")
             else:
                 print(f"Failed to post ({status_code}): {response_data}")
+            
+            time.sleep(5)
 
     print("AI News Bot completed.")
 
