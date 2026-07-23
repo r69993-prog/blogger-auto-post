@@ -1,8 +1,12 @@
 import os
 import json
+import base64
+import pickle
 import requests
 import feedparser
 from google import genai
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 
 # Load Config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -13,6 +17,25 @@ with open(CONFIG_PATH, "r", encoding="utf-8") as f:
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 BLOGGER_ACCESS_TOKEN = os.getenv("BLOGGER_ACCESS_TOKEN")
+TOKEN_PICKLE_BASE64 = os.getenv("TOKEN_PICKLE_BASE64")
+
+def get_valid_access_token():
+    """
+    พยายามดึง Access Token จาก TOKEN_PICKLE_BASE64 และต่ออายุอัตโนมัติหากมี Refresh Token
+    หากไม่มี จะใช้ค่า BLOGGER_ACCESS_TOKEN สำรองแทน
+    """
+    if TOKEN_PICKLE_BASE64:
+        try:
+            token_bytes = base64.b64decode(TOKEN_PICKLE_BASE64)
+            creds = pickle.loads(token_bytes)
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            if creds and creds.token:
+                return creds.token
+        except Exception as e:
+            print(f"Warning: Could not refresh token from pickle: {e}")
+            
+    return BLOGGER_ACCESS_TOKEN
 
 def extract_image_url(entry):
     if hasattr(entry, 'media_content') and entry.media_content:
@@ -83,6 +106,11 @@ def post_to_blogger(blog_id, title, content_html, labels, access_token):
 def main():
     print("Starting AI News Bot...")
     
+    access_token = get_valid_access_token()
+    if not access_token:
+        print("Error: No valid access token available.")
+        return
+
     blogs = config.get("blogs", [])
     for blog in blogs:
         blog_id = blog.get("BLOG_ID")
@@ -106,7 +134,7 @@ def main():
             
             post_title = f"สรุปข่าว: {title}"
             
-            status_code, response_data = post_to_blogger(blog_id, post_title, article_html, labels, BLOGGER_ACCESS_TOKEN)
+            status_code, response_data = post_to_blogger(blog_id, post_title, article_html, labels, access_token)
             if status_code == 200:
                 print(f"Successfully posted to Blogger with labels {labels}: {post_title}")
             else:
