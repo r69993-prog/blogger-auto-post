@@ -20,10 +20,6 @@ BLOGGER_ACCESS_TOKEN = os.getenv("BLOGGER_ACCESS_TOKEN")
 TOKEN_PICKLE_BASE64 = os.getenv("TOKEN_PICKLE_BASE64")
 
 def get_valid_access_token():
-    """
-    พยายามดึง Access Token จาก TOKEN_PICKLE_BASE64 และต่ออายุอัตโนมัติหากมี Refresh Token
-    หากไม่มี จะใช้ค่า BLOGGER_ACCESS_TOKEN สำรองแทน
-    """
     if TOKEN_PICKLE_BASE64:
         try:
             token_bytes = base64.b64decode(TOKEN_PICKLE_BASE64)
@@ -51,15 +47,16 @@ def extract_image_url(entry):
     return None
 
 def generate_seo_article_and_labels(title, summary, image_url):
-    client = genai.Client(api_key=GEMINI_API_KEY)
-    
-    img_tag_instruction = ""
-    if image_url:
-        img_tag_instruction = f"แทรกแท็กรูปภาพ HTML ด้านบนสุดของบทความให้ด้วย: <img src='{image_url}' alt='{title}' style='max-width:100%; height:auto; border-radius:8px; margin-bottom:15px;' />"
-    else:
-        img_tag_instruction = "ไม่ต้องแทรกแท็กรูปภาพหากไม่มีลิงก์รูปภาพ"
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        
+        img_tag_instruction = ""
+        if image_url:
+            img_tag_instruction = f"แทรกแท็กรูปภาพ HTML ด้านบนสุดของบทความให้ด้วย: <img src='{image_url}' alt='{title}' style='max-width:100%; height:auto; border-radius:8px; margin-bottom:15px;' />"
+        else:
+            img_tag_instruction = "ไม่ต้องแทรกแท็กรูปภาพหากไม่มีลิงก์รูปภาพ"
 
-    prompt = f"""
+        prompt = f"""
 วิเคราะห์ข่าวนี้แล้วสร้าง 2 อย่าง:
 1. บทความบล็อกฉบับเต็มอย่างละเอียด เป็นมืออาชีพ รองรับ SEO เป็นภาษาไทยทั้งหมด หัวข้อและเนื้อหาต้องเป็นภาษาไทย จัดโครงสร้างด้วยแท็ก HTML (เช่น <h2>, <p>, <ul>, <li>, <strong>) และ{img_tag_instruction}
 2. ป้ายกำกับ (Labels) จำนวน 4 คำที่ไม่ซ้ำกัน ซึ่งเกี่ยวข้องกับเนื้อหาในข่าว
@@ -70,23 +67,27 @@ def generate_seo_article_and_labels(title, summary, image_url):
 ส่งออกผลลัพธ์เป็น JSON object ที่มี 2 คีย์เท่านั้น คือ "content" (สตริง HTML) และ "labels" (อาเรย์ของสตริง 4 คำ) ห้ามใส่ markdown block ครอบ
 """
 
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=prompt
-    )
-    
-    text_res = response.text.strip()
-    if text_res.startswith("```json"):
-        text_res = text_res[7:]
-    if text_res.endswith("```"):
-        text_res = text_res[:-3]
-    text_res = text_res.strip()
-    
-    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
+        
+        text_res = response.text.strip()
+        if text_res.startswith("```json"):
+            text_res = text_res[7:]
+        if text_res.endswith("```"):
+            text_res = text_res[:-3]
+        text_res = text_res.strip()
+        
         data = json.loads(text_res)
-        return data.get("content", text_res), data.get("labels", [])
-    except Exception:
-        return response.text, ["ข่าวเทคโนโลยี", "ปัญญาประดิษฐ์", "นวัตกรรม", "ไอที"]
+        return data.get("content", f"<h2>{title}</h2><p>{summary}</p>"), data.get("labels", ["ข่าวเทคโนโลยี", "ปัญญาประดิษฐ์", "นวัตกรรม", "ไอที"])
+    except Exception as e:
+        print(f"Error generating content with Gemini: {e}")
+        fallback_html = f"<h2>{title}</h2>"
+        if image_url:
+            fallback_html += f"<img src='{image_url}' alt='{title}' style='max-width:100%; height:auto; border-radius:8px; margin-bottom:15px;' />"
+        fallback_html += f"<p>{summary}</p>"
+        return fallback_html, ["ข่าวเทคโนโลยี", "ปัญญาประดิษฐ์", "นวัตกรรม", "ไอที"]
 
 def post_to_blogger(blog_id, title, content_html, labels, access_token):
     url = f"https://www.googleapis.com/blogger/v3/blogs/{blog_id}/posts/"
